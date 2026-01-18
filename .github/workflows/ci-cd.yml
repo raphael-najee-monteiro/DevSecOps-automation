@@ -1,4 +1,4 @@
-name: DevSecOps Agent - Automated Security Scanning & CI/CD
+name: DevSecOps Agent
 
 on:
   push:
