@@ -1,0 +1,54 @@
+# Core AI/LLM
+google-genai>=0.3.0
+langchain>=0.3.0
+
+# Model Context Protocol
+mcp>=0.5.0
+
+# Security Analysis Tools
+bandit>=1.7.5
+semgrep>=1.60.0
+requests>=2.31.0
+
+# Data Handling & Serialization
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+jsonlines>=4.0.0
+python-dotenv>=1.0.0
+
+# Testing & Evaluation
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+coverage>=7.3.0
+
+# Visualization & Analysis
+matplotlib>=3.8.0
+seaborn>=0.13.0
+pandas>=2.1.0
+numpy>=1.24.0
+
+# Code Quality
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0
+ruff>=0.1.0
+
+# Documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=1.3.0
+
+# Utilities
+click>=8.1.0
+tqdm>=4.66.0
+pyyaml>=6.0.0
+loguru>=0.7.2
+
+# Async & Concurrency
+aiohttp>=3.9.0
+asyncio>=3.4.3
+
+# Optional: Jupyter notebooks
+jupyter>=1.0.0
+notebook>=7.0.0
+ipython>=8.0.0
