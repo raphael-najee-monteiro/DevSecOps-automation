@@ -72,8 +72,8 @@ def get_settings() -> Settings:
 
 def validate_settings() -> bool:
     """Validate critical settings are configured."""
-    if not settings.anthropic_api_key:
-        raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+    if not settings.gemini_api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is not set")
     
     if not settings.data_dir.exists():
         settings.data_dir.mkdir(parents=True, exist_ok=True)
@@ -91,7 +91,7 @@ def print_settings() -> None:
     print("=" * 60)
     
     config_dict = settings.model_dump()
-    sensitive_keys = {"anthropic_api_key"}
+    sensitive_keys = {"gemini_api_key"}
     
     for key, value in sorted(config_dict.items()):
         if key in sensitive_keys:

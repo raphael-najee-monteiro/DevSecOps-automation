@@ -1,11 +1,5 @@
 """
-Core Security Agent Implementation
-
-Orchestrates vulnerability detection and repair using:
-- Gemini LLM for reasoning and code generation
-- Bandit/Semgrep for static analysis
-- Model Context Protocol for tool integration
-- Multiple prompting strategies (CoT, CWE-specific, RCI)
+Updated Security Agent with Semgrep integration for real vulnerability detection.
 """
 
 import json
@@ -20,6 +14,7 @@ from src.logger import get_logger
 from src.config import settings
 from src.agent.prompts import CoTPrompts, CWETemplates, RCIPrompts, GenericPrompts
 from src.tools.cwe_database import CWEDatabase
+from src.tools.semgrep_analyzer import SemgrepAnalyzer, SemgrepFinding
 
 
 logger = get_logger(__name__)
@@ -28,20 +23,20 @@ logger = get_logger(__name__)
 @dataclass
 class VulnerabilityFinding:
     """A detected vulnerability."""
-    
+
     cwe_id: str
     severity: str
     description: str
     line_number: Optional[int] = None
-    tool: str = "unknown"
-    confidence: float = 0.5
+    tool: str = "semgrep"
+    confidence: float = 0.85
     raw_finding: Dict = field(default_factory=dict)
 
 
 @dataclass
 class SecurityAnalysisResult:
     """Result of security analysis on code."""
-    
+
     vulnerable: bool
     findings: List[VulnerabilityFinding] = field(default_factory=list)
     raw_output: str = ""
@@ -51,7 +46,7 @@ class SecurityAnalysisResult:
 @dataclass
 class VulnerabilityFix:
     """A proposed fix for a vulnerability."""
-    
+
     cwe_id: str
     fixed_code: str
     explanation: str
@@ -63,7 +58,7 @@ class VulnerabilityFix:
 @dataclass
 class AgentResult:
     """Final result from the security agent."""
-    
+
     input_code: str
     original_analysis: SecurityAnalysisResult
     fixes: List[VulnerabilityFix] = field(default_factory=list)
@@ -71,7 +66,7 @@ class AgentResult:
     success: bool = False
     message: str = ""
     processing_time: float = 0.0
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for serialization."""
         return {
@@ -83,6 +78,7 @@ class AgentResult:
                         "cwe_id": f.cwe_id,
                         "severity": f.severity,
                         "description": f.description,
+                        "line": f.line_number,
                     }
                     for f in self.original_analysis.findings
                 ],
@@ -106,52 +102,51 @@ class AgentResult:
 class SecurityAgent:
     """
     AI agent for detecting and fixing security vulnerabilities.
-    
-    Combines:
-    - Gemini LLM for reasoning
-    - Static analysis tools (Bandit, Semgrep) for detection
-    - Multiple prompting strategies for optimal results
-    - CWE-specific knowledge for targeted fixes
+
+    Now uses real Semgrep for vulnerability detection!
     """
 
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize the security agent.
-        
+
         Args:
-            api_key: Gemini API key (uses GEMINI_API_KEY env if not provided)
+            api_key: Google Gemini API key
         """
         self.api_key = api_key or settings.gemini_api_key
         self.model = settings.gemini_model
         self.max_tokens = settings.gemini_max_tokens
         self.timeout = settings.agent_timeout
         self.max_iterations = settings.agent_max_iterations
-        
+
+        # Initialize real tools
         genai.configure(api_key=self.api_key)
         self.client = genai.GenerativeModel(self.model)
         self.cwe_db = CWEDatabase()
-        
+        self.semgrep = SemgrepAnalyzer(config='p/security-audit')
+
         logger.info(f"Security Agent initialized with model {self.model}")
+        logger.info("Using Semgrep for real vulnerability detection")
 
     async def analyze_and_fix(self, code: str) -> AgentResult:
         """
         Main entry point: analyze code and attempt to fix vulnerabilities.
-        
+
         Args:
             code: Python code to analyze
-        
+
         Returns:
             AgentResult with findings and fixes
         """
         import time
         start_time = time.time()
-        
+
         logger.info("Starting vulnerability analysis and remediation")
-        
+
         try:
-            # Step 1: Analyze for vulnerabilities
+            # Step 1: Analyze with Semgrep
             analysis = await self._analyze_code(code)
-            
+
             if not analysis.vulnerable:
                 logger.info("No vulnerabilities detected")
                 return AgentResult(
@@ -161,27 +156,27 @@ class SecurityAgent:
                     message="Code is secure",
                     processing_time=time.time() - start_time,
                 )
-            
+
             logger.info(f"Found {len(analysis.findings)} vulnerabilities")
-            
-            # Step 2: Generate fixes
+
+            # Step 2: Generate fixes for each finding
             fixes = []
             for finding in analysis.findings:
                 fix = await self._generate_fix(code, finding)
                 if fix:
                     fixes.append(fix)
-            
+
             # Step 3: Apply fixes and re-analyze
             fixed_code = code
             if fixes:
                 fixed_code = await self._apply_fixes(code, fixes)
-            
+
             # Step 4: Validate fixes
             final_analysis = await self._analyze_code(fixed_code)
-            
+
             success = not final_analysis.vulnerable
             message = f"Fixed {len(fixes)} vulnerabilities" if success else "Some vulnerabilities remain"
-            
+
             return AgentResult(
                 input_code=code,
                 original_analysis=analysis,
@@ -191,7 +186,7 @@ class SecurityAgent:
                 message=message,
                 processing_time=time.time() - start_time,
             )
-        
+
         except Exception as e:
             logger.error(f"Error during analysis: {str(e)}")
             return AgentResult(
@@ -204,46 +199,36 @@ class SecurityAgent:
 
     async def _analyze_code(self, code: str) -> SecurityAnalysisResult:
         """
-        Analyze code for vulnerabilities using static analysis and LLM.
-        
+        Analyze code for vulnerabilities using REAL Semgrep.
+
         Args:
             code: Code to analyze
-        
+
         Returns:
-            SecurityAnalysisResult with findings
+            SecurityAnalysisResult with real findings
         """
-        logger.debug("Analyzing code for vulnerabilities")
-        
-        # Mock static analysis (in real implementation, would call Bandit/Semgrep)
-        findings = []
-        
-        # Detect SQL injection pattern
-        if "f\"" in code and "SELECT" in code and "{" in code:
-            findings.append(VulnerabilityFinding(
-                cwe_id="CWE-89",
-                severity="HIGH",
-                description="Potential SQL injection vulnerability detected",
-                tool="pattern-match",
-            ))
-        
-        # Detect command injection pattern
-        if "os.system" in code or "exec(" in code:
-            findings.append(VulnerabilityFinding(
-                cwe_id="CWE-78",
-                severity="HIGH",
-                description="Potential OS command injection vulnerability",
-                tool="pattern-match",
-            ))
-        
-        # Detect weak crypto
-        if "md5" in code.lower() or "sha1" in code.lower():
-            findings.append(VulnerabilityFinding(
-                cwe_id="CWE-327",
-                severity="HIGH",
-                description="Use of weak cryptographic algorithm",
-                tool="pattern-match",
-            ))
-        
+        logger.debug("Analyzing code with Semgrep")
+
+        # Use real Semgrep analysis
+        semgrep_findings = self.semgrep.analyze(code)
+
+        # Convert to VulnerabilityFinding objects
+        findings = [
+            VulnerabilityFinding(
+                cwe_id=sf.cwe_id,
+                severity=sf.severity,
+                description=sf.message,
+                line_number=sf.line_number,
+                tool='semgrep',
+                confidence=0.85,
+                raw_finding={
+                    'rule_id': sf.rule_id,
+                    'code': sf.code,
+                }
+            )
+            for sf in semgrep_findings
+        ]
+
         return SecurityAnalysisResult(
             vulnerable=len(findings) > 0,
             findings=findings,
@@ -256,52 +241,61 @@ class SecurityAgent:
         finding: VulnerabilityFinding,
     ) -> Optional[VulnerabilityFix]:
         """
-        Generate a fix for a specific vulnerability.
-        
+        Generate a fix for a specific vulnerability using LLM.
+
         Args:
             code: Original code
             finding: Vulnerability finding
-        
+
         Returns:
-            VulnerabilityFix or None if generation fails
+            VulnerabilityFix or None
         """
         logger.info(f"Generating fix for {finding.cwe_id}")
-        
+
         try:
-            # Select prompting strategy
-            if settings.agent_use_cot_prompting:
-                prompt = CoTPrompts.generate_fix_with_reasoning(
-                    code,
-                    {"description": finding.description},
-                    CWETemplates.get_template(finding.cwe_id),
-                )
-            else:
-                prompt = GenericPrompts.validate_fix(code, "")
-            
-            # Call Gemini
-            response = self.client.generate_content(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                messages=[{"role": "user", "content": prompt}],
+            # Get CWE context
+            cwe_context = CWETemplates.get_template(finding.cwe_id)
+
+            # Use Chain-of-Thought for reasoning
+            prompt = CoTPrompts.generate_fix_with_reasoning(
+                code,
+                {"description": finding.description},
+                cwe_context,
             )
-            
-            response_text = response.text
-            
-            # Extract fixed code from response
-            fixed_code = self._extract_code_from_response(response_text)
-            
-            if not fixed_code:
-                logger.warning(f"Could not extract fixed code from response")
+
+            # Call LLM
+            logger.debug(f"Calling LLM for {finding.cwe_id}")
+            response = self.client.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=self.max_tokens,
+                    temperature=0.3,
+                )
+            )
+
+            if not response or not response.text:
+                logger.warning("Empty response from LLM")
                 return None
-            
+
+            response_text = response.text
+            logger.debug(f"LLM Response: {response_text[:200]}...")
+
+            # Extract fixed code
+            fixed_code = self._extract_code_from_response(response_text)
+
+            if not fixed_code:
+                logger.warning("Could not extract code from response")
+                return None
+
             return VulnerabilityFix(
                 cwe_id=finding.cwe_id,
                 fixed_code=fixed_code,
                 explanation=response_text,
                 confidence=0.7,
+                validation_status="pending",
                 iterations=1,
             )
-        
+
         except Exception as e:
             logger.error(f"Error generating fix: {str(e)}")
             return None
@@ -309,73 +303,84 @@ class SecurityAgent:
     async def _apply_fixes(self, code: str, fixes: List[VulnerabilityFix]) -> str:
         """
         Apply fixes to code.
-        
+
         Args:
             code: Original code
             fixes: List of fixes to apply
-        
+
         Returns:
             Fixed code
         """
         if not fixes:
             return code
-        
-        # For now, return the first fix's code
+
+        # For now, apply the first fix
         # In production, would merge multiple fixes intelligently
         return fixes[0].fixed_code
 
     def _extract_code_from_response(self, response: str) -> Optional[str]:
         """
         Extract Python code from LLM response.
-        
+
         Args:
-            response: Response text from Gemini
-        
+            response: Response text from LLM
+
         Returns:
             Extracted code or None
         """
-        # Look for code blocks
-        if "```python" in response:
-            start = response.find("```python") + len("```python")
-            end = response.find("```", start)
-            if end > start:
-                return response[start:end].strip()
-        
-        if "```" in response:
-            start = response.find("```") + 3
-            end = response.find("```", start)
-            if end > start:
-                return response[start:end].strip()
-        
+        import re
+
+        # Try Python code blocks first
+        patterns = [
+            r'```python\n(.*?)```',
+            r'```Python\n(.*?)```',
+            r'```\n(.*?)```',
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, response, re.DOTALL)
+            if match:
+                code = match.group(1).strip()
+                if len(code) > 10:
+                    logger.debug("Extracted code from code block")
+                    return code
+
         return None
 
     async def validate_fix(self, original_code: str, fixed_code: str) -> bool:
         """
-        Validate that a fix is correct and secure.
-        
+        Validate that a fix is correct.
+
         Args:
-            original_code: Original vulnerable code
-            fixed_code: Proposed fix
-        
+            original_code: Original code
+            fixed_code: Fixed code
+
         Returns:
-            True if fix is valid
+            True if valid
         """
-        prompt = GenericPrompts.validate_fix(original_code, fixed_code)
-        
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=1000,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        
-        response_text = response.content[0].text.upper()
-        
-        return "VALID" in response_text
+        try:
+            prompt = GenericPrompts.validate_fix(original_code, fixed_code)
+
+            response = self.client.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=500,
+                )
+            )
+
+            if not response or not response.text:
+                return False
+
+            return "VALID" in response.text.upper()
+
+        except Exception as e:
+            logger.error(f"Error validating fix: {e}")
+            return False
 
 
 async def main():
-    """Example usage of the security agent."""
-    
+    """Example usage of the security agent with Semgrep."""
+
     # Example vulnerable code
     vulnerable_code = """
 import sqlite3
@@ -387,12 +392,12 @@ def search_user(username):
     cursor.execute(query)
     return cursor.fetchall()
 """
-    
+
     agent = SecurityAgent()
     result = await agent.analyze_and_fix(vulnerable_code)
-    
+
     print("=" * 80)
-    print("SECURITY AGENT RESULT")
+    print("SECURITY AGENT RESULT (WITH SEMGREP)")
     print("=" * 80)
     print(json.dumps(result.to_dict(), indent=2))
 
