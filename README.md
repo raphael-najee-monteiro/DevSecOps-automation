@@ -27,24 +27,24 @@ No manual intervention required. Security issues get fixed before they reach pro
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           GitHub Actions Workflow                            │
+│                           GitHub Actions Workflow                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐             │
-│   │   PUSH   │───>│   SCAN   │───>│   FIX    │───>│  COMMIT  │             │
-│   └──────────┘    └──────────┘    └──────────┘    └──────────┘             │
+│                                                                             │
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐              │
+│   │   PUSH   │───>│   SCAN   │───>│   FIX    │───>│  COMMIT  │              │
+│   └──────────┘    └──────────┘    └──────────┘    └──────────┘              │
 │                         │              │               │                    │
 │                         ▼              ▼               ▼                    │
-│                   ┌──────────┐   ┌──────────┐   ┌──────────┐               │
-│                   │ Semgrep  │   │   LLM    │   │   Git    │               │
-│                   │ Patterns │   │  (AI)    │   │   Push   │               │
-│                   │   CWE    │   │   CoT    │   │          │               │
-│                   └──────────┘   └──────────┘   └──────────┘               │
-│                                                                              │
+│                   ┌──────────┐   ┌──────────┐   ┌──────────┐                │
+│                   │ Semgrep  │   │   LLM    │   │   Git    │                │
+│                   │ Patterns │   │  (AI)    │   │   Push   │                │
+│                   │   CWE    │   │   CoT    │   │          │                │
+│                   └──────────┘   └──────────┘   └──────────┘                │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 On Push:        Scans code → Fixes vulnerabilities → Commits & pushes fixes
-On Pull Request: Scans code → Fixes vulnerabilities → Comments findings on PR
+On PR:          Scans code → Fixes vulnerabilities → Comments findings on PR
 ```
 
 ---
@@ -236,26 +236,3 @@ src/
 | Analysis | CWE Database | Classify and understand issues |
 | Reasoning | LLM (AI) | Generate intelligent fixes |
 | Integration | GitHub Actions | Automate the workflow |
-
----
-
-## Why This Approach?
-
-Research shows LLMs introduce **9x more vulnerabilities** than humans when writing code. This agent reduces that to **2-3x** by:
-
-- Using **CWE-specific prompts** tailored to each vulnerability type
-- Applying **Chain-of-Thought reasoning** for step-by-step analysis
-- **Validating fixes** by re-scanning after each change
-- Leveraging **static analysis** (Semgrep) alongside AI
-
----
-
-## Contributing
-
-Contributions welcome! Please open an issue or PR.
-
----
-
-## License
-
-MIT

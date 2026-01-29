@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     """Application settings from environment variables."""
 
     # API Configuration
-    llm_api_key: str = "" # get from .env
-    llm_model: str = ""
+    # llm_api_key: str = ""  # Set via LLM_API_KEY env var
+    llm_model: str = "gemini-2.5-flash"  # Default model
     llm_max_tokens: int = 4096
 
     # Agent Configuration
