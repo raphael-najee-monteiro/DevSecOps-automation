@@ -160,9 +160,13 @@ async def scan_files(
         fix_applied = False
 
         # Write fixes back to file if requested and fixes are available
-        if attempt_fixes and result.fixes and result.success:
-            # Get the fixed code from the last fix (which contains the complete fixed file)
-            fixed_code = result.fixes[-1].fixed_code
+        if attempt_fixes and result.fixes:
+            # Get the fixed code - use the last fix which should contain the most complete version
+            fixed_code = None
+            for fix in result.fixes:
+                if fix.fixed_code:
+                    fixed_code = fix.fixed_code
+
             if fixed_code and fixed_code != code:
                 if write_file(file_path, fixed_code):
                     fix_applied = True

@@ -164,17 +164,18 @@ class SecurityAgent:
 
             logger.info(f"Found {len(analysis.findings)} vulnerabilities")
 
-            # Step 2: Generate fixes
+            # Step 2: Generate fixes - chain them together
             fixes = []
+            current_code = code
             for finding in analysis.findings:
-                fix = await self._generate_fix(code, finding)
-                if fix:
+                fix = await self._generate_fix(current_code, finding)
+                if fix and fix.fixed_code:
                     fixes.append(fix)
+                    # Use the fixed code as input for the next fix
+                    current_code = fix.fixed_code
 
-            # Step 3: Apply fixes and re-analyze
-            fixed_code = code
-            if fixes:
-                fixed_code = await self._apply_fixes(code, fixes)
+            # Step 3: The final code is the result of all chained fixes
+            fixed_code = current_code
 
             # Step 4: Validate fixes
             final_analysis = await self._analyze_code(fixed_code)
