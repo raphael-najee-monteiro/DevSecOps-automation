@@ -2,7 +2,7 @@
 Core Security Agent Implementation
 
 Orchestrates vulnerability detection and repair using:
-- Gemini LLM for reasoning and code generation
+- LLM for reasoning and code generation
 - Bandit/Semgrep for static analysis
 - Model Context Protocol for tool integration
 - Multiple prompting strategies (CoT, CWE-specific, RCI)
@@ -108,7 +108,7 @@ class SecurityAgent:
     AI agent for detecting and fixing security vulnerabilities.
 
     Combines:
-    - Gemini LLM for reasoning
+    - LLM LLM for reasoning
     - Static analysis tools (Bandit, Semgrep) for detection
     - Multiple prompting strategies for optimal results
     - CWE-specific knowledge for targeted fixes
@@ -119,15 +119,15 @@ class SecurityAgent:
         Initialize the security agent.
 
         Args:
-            api_key: Gemini API key (uses GEMINI_API_KEY env if not provided)
+            api_key: LLM API key (uses LLM_API_KEY env if not provided)
         """
-        self.api_key = api_key or settings.gemini_api_key
-        self.model = settings.gemini_model
-        self.max_tokens = settings.gemini_max_tokens
+        self.api_key = api_key or settings.llm_api_key
+        self.model = settings.llm_model
+        self.max_tokens = settings.llm_max_tokens
         self.timeout = settings.agent_timeout
         self.max_iterations = settings.agent_max_iterations
 
-        # Initialize Gemini client with new API
+        # Initialize LLM client with new API
         self.client = genai.Client(api_key=self.api_key)
         self.cwe_db = CWEDatabase()
 
@@ -278,7 +278,7 @@ class SecurityAgent:
             else:
                 prompt = GenericPrompts.validate_fix(code, "")
 
-            # Call Gemini with new API
+            # Call LLM with new API
             response = self.client.models.generate_content(
                 model=self.model,
                 contents=prompt,
@@ -328,7 +328,7 @@ class SecurityAgent:
         Extract Python code from LLM response.
 
         Args:
-            response: Response text from Gemini
+            response: Response text from LLM
 
         Returns:
             Extracted code or None

@@ -1,0 +1,22 @@
+# Basic usage - Add this to your project at .github/workflows/security.yml
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run DevSecOps Agent
+        uses: raphael-najee-monteiro/DevSecOps-automation@v1
+        with:
+          llm_api_key: ${{ secrets.LLM_API_KEY }}

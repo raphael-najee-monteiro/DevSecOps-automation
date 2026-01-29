@@ -1,160 +1,261 @@
-# Agentic AI for Secure Software Development in SecDevOps
+# DevSecOps Agent
 
-[![DevSecOps Agent](https://github.com/raphael-najee-monteiro/DevSecOps-automation/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/raphael-najee-monteiro/DevSecOps-automation/actions/workflows/ci-cd.yml)
+[![DevSecOps Agent](https://github.com/raphael-najee-monteiro/DevSecOps-automation/actions/workflows/demo.yml/badge.svg)](https://github.com/raphael-najee-monteiro/DevSecOps-automation/actions/workflows/demo.yml)
 
-
-## The Problem
-
-Research shows that LLMs introduce **9x more security vulnerabilities** than human developers when fixing code. Current approaches lack domain-specific reasoning and iterative refinement for security-critical tasks.
-
-## The Solution
-
-An **autonomous AI agent** that detects and repairs security vulnerabilities with production-grade quality, reducing vulnerability introduction rates from 9x to **2-3x compared to human developers**.
-
-## Core Architecture
+**An AI-powered GitHub Action that automatically detects and fixes security vulnerabilities in your Python code.**
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│         Agentic Security Orchestrator                    │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│  Detection Layer          Analysis Layer  Repair Layer   │
-│  ────────────────        ─────────────── ──────────────  │
-│  • Semgrep Scanner      • CWE Database  • CoT Reasoning  │
-│  • Static Analysis      • Risk Mapping  • LLM Generation │
-│  • Pattern Matching     • Severity Rank • RCI Iteration  │
-│                                                          │
-└──────────────────────────────────────────────────────────┘
-        ↓
-    Google Gemini LLM
-    (Code Generation & Reasoning)
-        ↓
-    Output: Fixed Code + Validation
+Push code  ──>  Scan for vulnerabilities  ──>  AI fixes issues  ──>  Auto-commit
 ```
 
-## Key Features
+---
 
-### 🔍 **Real Vulnerability Detection**
-- **Semgrep-powered scanning** - Industry-standard security rules
-- **8+ CWE types detected** - SQL injection, command injection, weak crypto, XSS, and more
-- **Automated on every push** - CI/CD integrated security scanning
+## What It Does
 
-### 🤖 **AI-Driven Code Repair**
-- **Chain-of-Thought reasoning** - Step-by-step vulnerability analysis
-- **CWE-specific knowledge** - Domain-tailored fix generation
-- **Recursive critique & improve** - Iterative refinement for quality assurance
-- **Google Gemini LLM** - Multi-modal reasoning capabilities
+When you push code or open a pull request, this agent:
 
-### ✅ **Production-Grade Implementation**
-- **Comprehensive testing** - 50+ test cases, multi-version Python support
-- **CI/CD automation** - Full GitHub Actions pipeline with security scanning
-- **Code quality** - Black, Flake8, mypy, Ruff checks on every commit
-- **Professional logging** - Structured logging throughout
+1. **Scans** your Python files for security vulnerabilities
+2. **Analyzes** issues using CWE (Common Weakness Enumeration) classifications
+3. **Fixes** vulnerabilities using AI-powered code generation
+4. **Commits** the fixes automatically with detailed descriptions
 
-### 📊 **DevSecOps Best Practices**
-- **Automated security gates** - Fail fast on vulnerability detection
-- **Coverage reports** - Codecov integration for visibility
-- **Artifact management** - Security reports and build artifacts
-- **Status visibility** - GitHub badges for real-time status
+No manual intervention required. Security issues get fixed before they reach production.
 
-## Technical Stack
+---
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Vulnerability Detection** | Semgrep, Bandit | Real security scanning |
-| **Code Reasoning** | Google Gemini API | LLM-powered analysis |
-| **Testing** | pytest, pytest-asyncio | Comprehensive test suite |
-| **CI/CD** | GitHub Actions | Automated workflows |
-| **Code Quality** | Black, Flake8, mypy, Ruff | Code standards |
-| **Database** | CWE Classification | Security knowledge base |
-
-## DevSecOps Automation
-
-### Continuous Integration & Continuous Security
-
-```yaml
-On every push/PR:
-  ✓ Code quality checks (5 tools)
-  ✓ Unit tests (Python 3.9-3.12)
-  ✓ Security scanning (Semgrep + Bandit)
-  ✓ Vulnerability reports
-  ✓ Coverage analysis
-  ✓ Artifact uploads
-```
-
-### Zero-Trust Security Model
-- **Fail-fast approach** - Block commits with security vulnerabilities
-- **Automated remediation** - AI agent suggests and validates fixes
-- **Immutable audit trail** - All security decisions logged
-- **Compliance-ready** - CWE classification for regulatory reporting
-
-## What Gets Detected
+## How It Works
 
 ```
-CWE-89    SQL Injection
-CWE-78    OS Command Injection
-CWE-327   Weak Cryptographic Algorithm
-CWE-502   Unsafe Deserialization
-CWE-798   Hardcoded Credentials
-CWE-79    Cross-Site Scripting (XSS)
-CWE-95    Use of eval()/exec()
-CWE-732   Incorrect File Permissions
-... and 100+ additional rules
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           GitHub Actions Workflow                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐             │
+│   │   PUSH   │───>│   SCAN   │───>│   FIX    │───>│  COMMIT  │             │
+│   └──────────┘    └──────────┘    └──────────┘    └──────────┘             │
+│                         │              │               │                    │
+│                         ▼              ▼               ▼                    │
+│                   ┌──────────┐   ┌──────────┐   ┌──────────┐               │
+│                   │ Semgrep  │   │   LLM    │   │   Git    │               │
+│                   │ Patterns │   │  (AI)    │   │   Push   │               │
+│                   │   CWE    │   │   CoT    │   │          │               │
+│                   └──────────┘   └──────────┘   └──────────┘               │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+On Push:        Scans code → Fixes vulnerabilities → Commits & pushes fixes
+On Pull Request: Scans code → Fixes vulnerabilities → Comments findings on PR
 ```
+
+---
 
 ## Quick Start
 
-### Installation
-```bash
-pip install -r requirements.txt
+### 1. Get an LLM API Key
+
+Get an API key from your preferred LLM provider:
+- [Google AI Studio](https://aistudio.google.com/app/apikey) (Gemini)
+- [OpenAI](https://platform.openai.com/api-keys)
+- Or any compatible LLM API
+
+### 2. Add Secret to Your Repository
+
+Go to your repo **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+
+- Name: `LLM_API_KEY`
+- Value: Your API key
+
+### 3. Create the Workflow
+
+Add this file to your project at `.github/workflows/security.yml`:
+
+```yaml
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run DevSecOps Agent
+        uses: raphael-najee-monteiro/DevSecOps-automation@v1
+        with:
+          llm_api_key: ${{ secrets.LLM_API_KEY }}
 ```
 
-### Run Agent
-```bash
-# SINGLE FILE
-python -m src.agent.main path/to/file.py
+### 4. Push and Watch
 
-# DIRECTORY
+Push any code. The agent will scan it, fix vulnerabilities, and commit the fixes automatically.
+
+---
+
+## Configuration
+
+### Inputs
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `llm_api_key` | API key for LLM provider (**required**) | - |
+| `path` | Directory or file to scan | `.` |
+| `auto_fix` | Apply fixes automatically | `true` |
+| `auto_commit` | Commit and push fixes | `true` |
+| `python_version` | Python version | `3.11` |
+| `fail_on_vulnerabilities` | Fail workflow if unfixed issues remain | `false` |
+
+### Outputs
+
+| Output | Description |
+|--------|-------------|
+| `vulnerabilities_found` | Number of issues detected |
+| `fixes_applied` | Number of fixes applied |
+| `files_modified` | List of modified files |
+| `report_path` | Path to JSON report |
+
+### Example: Scan Only (No Auto-Fix)
+
+```yaml
+- uses: raphael-najee-monteiro/DevSecOps-automation@v1
+  with:
+    llm_api_key: ${{ secrets.LLM_API_KEY }}
+    auto_fix: 'false'
+    auto_commit: 'false'
+    fail_on_vulnerabilities: 'true'
+```
+
+### Example: Scan Specific Directory
+
+```yaml
+- uses: raphael-najee-monteiro/DevSecOps-automation@v1
+  with:
+    llm_api_key: ${{ secrets.LLM_API_KEY }}
+    path: 'src/'
+```
+
+See [`example_workflows/`](example_workflows/) for more configurations.
+
+---
+
+## What Gets Detected & Fixed
+
+| CWE | Vulnerability | Example |
+|-----|---------------|---------|
+| CWE-89 | SQL Injection | `f"SELECT * FROM users WHERE id = {user_id}"` |
+| CWE-78 | Command Injection | `os.system(f"echo {user_input}")` |
+| CWE-79 | Cross-Site Scripting (XSS) | Unescaped user input in HTML |
+| CWE-327 | Weak Cryptography | Using MD5 or SHA1 for passwords |
+| CWE-502 | Unsafe Deserialization | `pickle.loads(untrusted_data)` |
+| CWE-798 | Hardcoded Credentials | `password = "admin123"` |
+| CWE-95 | Code Injection | `eval(user_input)` |
+| CWE-732 | Incorrect Permissions | `os.chmod(file, 0o777)` |
+
+Plus 100+ additional security rules via Semgrep.
+
+---
+
+## How the AI Fixes Code
+
+The agent uses a multi-step reasoning process:
+
+```
+1. DETECT      Pattern matching + Semgrep static analysis
+                        ↓
+2. CLASSIFY    Map to CWE category (SQL injection, XSS, etc.)
+                        ↓
+3. REASON      Chain-of-Thought analysis of the vulnerability
+                        ↓
+4. FIX         Generate secure code using CWE-specific templates
+                        ↓
+5. VALIDATE    Re-scan to verify the fix worked
+```
+
+### Example Fix
+
+**Before (vulnerable):**
+```python
+def get_user(user_id):
+    query = f"SELECT * FROM users WHERE id = {user_id}"
+    cursor.execute(query)
+```
+
+**After (fixed by agent):**
+```python
+def get_user(user_id):
+    query = "SELECT * FROM users WHERE id = ?"
+    cursor.execute(query, (user_id,))
+```
+
+---
+
+## Local Usage
+
+You can also run the agent locally:
+
+```bash
+# Install
+pip install -r requirements.txt
+
+# Scan a directory
 python -m src.agent.main src/
 
-# ENTIRE PROJECT
-python -m src.agent.main .
+# Scan and fix
+python -m src.agent.main src/ --fix
 
-# WITH REPORT
-python -m src.agent.main . --output report.json
-
-# VERBOSE + REPORT
-python -m src.agent.main . --output report.json --verbose
-
-# SPECIFIC FOLDER
-python -m src.agent.main src/api/ --output api-report.json
-
-# TIMESTAMPED REPORT
-python -m src.agent.main . --output report-$(date +%Y%m%d-%H%M%S).json
-
-# CI/CD COMMAND
-python -m src.agent.main . --output security-report.json
+# Generate report
+python -m src.agent.main src/ --fix --output report.json
 ```
 
-## Project Structure
+---
+
+## Architecture
 
 ```
-├── src/
-│   ├── agent/
-│   │   ├── security_agent.py          # Main agent orchestrator
-│   │   └── prompts.py                 # Prompting strategies (CoT, RCI, CWE-specific)
-│   ├── tools/
-│   │   ├── semgrep_analyzer.py        # Real vulnerability detection
-│   │   └── cwe_database.py            # CWE knowledge base (9 major types)
-│   ├── config.py                      # Configuration management
-│   └── logger.py                      # Structured logging
-├── test/
-│   └── test_agent.py                  # 50+ test cases
-├── .github/workflows/
-│   └── ci-cd.yml                      # GitHub Actions pipeline
-├── data/
-│   ├── cwe_database.json              # CWE metadata & remediation
-│   └── examples/                      # Vulnerable code samples
-└── requirements.txt                   # Dependencies (Semgrep, Gemini, pytest)
+src/
+├── agent/
+│   ├── main.py              # CLI entry point
+│   ├── security_agent.py    # Core orchestration
+│   └── prompts.py           # LLM prompt templates
+├── tools/
+│   ├── semgrep_analyzer.py  # Static analysis
+│   └── cwe_database.py      # Vulnerability knowledge base
+└── config.py                # Configuration
 ```
 
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Detection | Semgrep, Pattern Matching | Find vulnerabilities |
+| Analysis | CWE Database | Classify and understand issues |
+| Reasoning | LLM (AI) | Generate intelligent fixes |
+| Integration | GitHub Actions | Automate the workflow |
+
+---
+
+## Why This Approach?
+
+Research shows LLMs introduce **9x more vulnerabilities** than humans when writing code. This agent reduces that to **2-3x** by:
+
+- Using **CWE-specific prompts** tailored to each vulnerability type
+- Applying **Chain-of-Thought reasoning** for step-by-step analysis
+- **Validating fixes** by re-scanning after each change
+- Leveraging **static analysis** (Semgrep) alongside AI
+
+---
+
+## Contributing
+
+Contributions welcome! Please open an issue or PR.
+
+---
+
+## License
+
+MIT

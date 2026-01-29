@@ -1,0 +1,75 @@
+# Advanced usage with all options
+name: Security Scan (Advanced)
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily at midnight
+    - cron: '0 0 * * *'
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run DevSecOps Agent
+        id: security-scan
+        uses: raphael-najee-monteiro/DevSecOps-automation@v1
+        with:
+          llm_api_key: ${{ secrets.LLM_API_KEY }}
+          path: 'src/'                    # Only scan src directory
+          auto_fix: 'true'                # Apply fixes automatically
+          auto_commit: 'true'             # Commit fixes (on push only)
+          python_version: '3.11'          # Python version
+          fail_on_vulnerabilities: 'true' # Fail if unfixed vulns remain
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: ${{ steps.security-scan.outputs.report_path }}
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Vulnerabilities Found: ${{ steps.security-scan.outputs.vulnerabilities_found }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Fixes Applied: ${{ steps.security-scan.outputs.fixes_applied }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Files Modified: ${{ steps.security-scan.outputs.files_modified }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const vulns = '${{ steps.security-scan.outputs.vulnerabilities_found }}';
+            const fixes = '${{ steps.security-scan.outputs.fixes_applied }}';
+            const files = '${{ steps.security-scan.outputs.files_modified }}';
+
+            let body = `## 🔒 Security Scan Results\n\n`;
+            body += `| Metric | Value |\n|--------|-------|\n`;
+            body += `| Vulnerabilities Found | ${vulns} |\n`;
+            body += `| Fixes Applied | ${fixes} |\n`;
+
+            if (files) {
+              body += `\n### Files Modified\n`;
+              files.split(',').forEach(f => {
+                if (f) body += `- \`${f}\`\n`;
+              });
+            }
+
+            body += `\n---\n🤖 *Scanned by [DevSecOps Agent](https://github.com/raphael-najee-monteiro/DevSecOps-automation)*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

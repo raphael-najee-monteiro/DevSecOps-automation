@@ -1,0 +1,178 @@
+name: 'DevSecOps Agent'
+description: 'AI-powered security vulnerability detection and auto-remediation for Python projects'
+author: 'raphael-najee-monteiro'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  llm_api_key:
+    description: 'API key for the LLM provider (e.g., Google Gemini, OpenAI)'
+    required: true
+  path:
+    description: 'Path to scan (file or directory)'
+    required: false
+    default: '.'
+  auto_fix:
+    description: 'Automatically fix detected vulnerabilities'
+    required: false
+    default: 'true'
+  auto_commit:
+    description: 'Automatically commit and push fixes (only on push events)'
+    required: false
+    default: 'true'
+  python_version:
+    description: 'Python version to use'
+    required: false
+    default: '3.11'
+  fail_on_vulnerabilities:
+    description: 'Fail the action if unfixed vulnerabilities remain'
+    required: false
+    default: 'false'
+
+outputs:
+  vulnerabilities_found:
+    description: 'Total number of vulnerabilities detected'
+    value: ${{ steps.run-agent.outputs.vulnerabilities_found }}
+  fixes_applied:
+    description: 'Number of fixes applied'
+    value: ${{ steps.run-agent.outputs.fixes_applied }}
+  files_modified:
+    description: 'List of files that were modified'
+    value: ${{ steps.run-agent.outputs.files_modified }}
+  report_path:
+    description: 'Path to the JSON security report'
+    value: ${{ steps.run-agent.outputs.report_path }}
+  has_unfixed_vulnerabilities:
+    description: 'Whether there are remaining unfixed vulnerabilities'
+    value: ${{ steps.run-agent.outputs.has_unfixed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python_version }}
+
+    - name: Install DevSecOps Agent
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run DevSecOps Agent
+      id: run-agent
+      shell: bash
+      env:
+        LLM_API_KEY: ${{ inputs.llm_api_key }}
+      run: |
+        # Build command based on inputs
+        CMD="python -m src.agent.main ${{ inputs.path }} --output security-report.json"
+
+        if [ "${{ inputs.auto_fix }}" == "true" ]; then
+          CMD="$CMD --fix"
+        fi
+
+        # Run from the action's directory
+        cd ${{ github.action_path }}
+        $CMD
+
+        # Copy report to workspace
+        cp security-report.json ${{ github.workspace }}/security-report.json 2>/dev/null || true
+
+        # Parse results and set outputs
+        if [ -f security-report.json ]; then
+          VULNS=$(python -c "import json; r=json.load(open('security-report.json')); print(r.get('total_vulnerabilities', 0))")
+          FIXES=$(python -c "import json; r=json.load(open('security-report.json')); print(r.get('total_fixes', 0))")
+          FILES=$(python -c "import json; r=json.load(open('security-report.json')); print(','.join(r.get('files_modified', [])))")
+
+          echo "vulnerabilities_found=$VULNS" >> $GITHUB_OUTPUT
+          echo "fixes_applied=$FIXES" >> $GITHUB_OUTPUT
+          echo "files_modified=$FILES" >> $GITHUB_OUTPUT
+          echo "report_path=${{ github.workspace }}/security-report.json" >> $GITHUB_OUTPUT
+
+          # Check for unfixed vulnerabilities
+          UNFIXED=$((VULNS - FIXES))
+          if [ $UNFIXED -gt 0 ]; then
+            echo "has_unfixed=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_unfixed=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "vulnerabilities_found=0" >> $GITHUB_OUTPUT
+          echo "fixes_applied=0" >> $GITHUB_OUTPUT
+          echo "files_modified=" >> $GITHUB_OUTPUT
+          echo "report_path=" >> $GITHUB_OUTPUT
+          echo "has_unfixed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check for fixes to commit
+      id: check-fixes
+      if: inputs.auto_commit == 'true'
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        if git diff --quiet; then
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+
+          # Get fix details for commit message
+          if [ -f security-report.json ]; then
+            FIX_COUNT=$(python -c "import json; r=json.load(open('security-report.json')); print(r.get('total_fixes', 0))")
+            echo "fix_count=$FIX_COUNT" >> $GITHUB_OUTPUT
+
+            python -c "
+        import json
+        r = json.load(open('security-report.json'))
+        files = r.get('files_modified', [])
+        print('FILES_MODIFIED<<EOF')
+        for f in files:
+            print(f)
+        print('EOF')
+        " >> $GITHUB_OUTPUT
+
+            python -c "
+        import json
+        r = json.load(open('security-report.json'))
+        print('FIX_DETAILS<<EOF')
+        for s in r.get('fix_summaries', []):
+            print(f\"- {s['file']}: Fixed {s['cwe']}\")
+        print('EOF')
+        " >> $GITHUB_OUTPUT
+          fi
+        fi
+
+    - name: Commit and push fixes
+      if: steps.check-fixes.outputs.has_changes == 'true' && github.event_name == 'push' && inputs.auto_commit == 'true'
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        git config user.name "DevSecOps Bot"
+        git config user.email "devsecops-bot@users.noreply.github.com"
+
+        git add -A
+
+        git commit -m "fix(security): auto-remediate ${{ steps.check-fixes.outputs.fix_count }} vulnerabilities
+
+        Automated security fixes applied by DevSecOps Agent.
+
+        Files modified:
+        ${{ steps.check-fixes.outputs.FILES_MODIFIED }}
+
+        Fixes applied:
+        ${{ steps.check-fixes.outputs.FIX_DETAILS }}
+
+        Generated by DevSecOps Agent
+        https://github.com/raphael-najee-monteiro/DevSecOps-automation"
+
+        git push
+
+    - name: Fail if unfixed vulnerabilities
+      if: inputs.fail_on_vulnerabilities == 'true' && steps.run-agent.outputs.has_unfixed == 'true'
+      shell: bash
+      run: |
+        echo "::error::Unfixed security vulnerabilities detected!"
+        exit 1
